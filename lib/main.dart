@@ -43,7 +43,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return NeumorphicApp(
       debugShowCheckedModeBanner: false,
-      title: 'Rock Paper Scissor Fever',
+      title: 'Rock Paper Scissors Fever',
       themeMode: ThemeMode.light,
       theme: NeumorphicThemeData(
           defaultTextColor: Color(0xFF303E57),
@@ -178,7 +178,7 @@ class _MainContentState extends State<MainContent> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
         Padding(
-          padding: EdgeInsets.fromLTRB(20.0, 0.0, 20.0, 20.0),
+          padding: EdgeInsets.all(20.0),
           child: _buildTitle(context),
         ),
         Flexible(
@@ -190,21 +190,22 @@ class _MainContentState extends State<MainContent> {
             statusSink: _onStatusChange.sink,
           ),
         ),
-        SizedBox(height: 30),
+        SizedBox(height: 20),
         _buildHandButtons(context),
-        SizedBox(height: 30),
+        SizedBox(height: 20),
         PlayButton(
           coinCountsStream: _onCoinCountsChange.stream,
           statusStream: _onStatusChange.stream,
           statusSink: _onStatusChange.sink,
         ),
+        SizedBox(height: 20),
       ],
     );
   }
 
   Widget _buildTitle(BuildContext context) {
     return NeumorphicText(
-      "Rock Paper Scissor Fever",
+      "Rock Paper Scissors Fever",
       style: NeumorphicStyle(
         depth: 1, //customize depth here
         color: NeumorphicTheme.defaultTextColor(context), //customize color here
@@ -387,7 +388,8 @@ class HandButton extends StatelessWidget {
                 style: NeumorphicStyle(
                   intensity: 0.8,
                   color: sSnapShot.data == Status.playing ||
-                          ((sSnapShot.data == Status.win ||
+                          ((sSnapShot.data == Status.prise ||
+                                  sSnapShot.data == Status.win ||
                                   sSnapShot.data == Status.draw) &&
                               pSnapShot.data == index)
                       ? NeumorphicTheme.accentColor(context)
