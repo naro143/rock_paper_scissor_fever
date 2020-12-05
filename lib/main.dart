@@ -10,6 +10,7 @@ enum Status {
   init,
   playing,
   judge,
+  prise,
   win,
   draw,
   lose,
@@ -100,8 +101,10 @@ class _MainContentState extends State<MainContent> {
             _onStatusChange.sink.add(Status.playing);
           });
           break;
-        case Status.win:
+        case Status.prise:
           prise();
+          break;
+        case Status.win:
           break;
         case Status.lose:
           break;
@@ -136,7 +139,7 @@ class _MainContentState extends State<MainContent> {
             _onEHandIndexChange.stream.value == 0) ||
         _onEHandIndexChange.stream.value - _onPHandIndexChange.stream.value ==
             1) {
-      _onStatusChange.sink.add(Status.win);
+      _onStatusChange.sink.add(Status.prise);
     } else {
       _onStatusChange.sink.add(Status.lose);
     }
@@ -164,6 +167,7 @@ class _MainContentState extends State<MainContent> {
     });
 
     await Future.delayed(Duration(milliseconds: interval * moveCount));
+    _onStatusChange.sink.add(Status.win);
     return bIndex;
   }
 
@@ -416,10 +420,11 @@ class PlayButton extends StatelessWidget {
             intensity: 0.8,
           ),
           margin: EdgeInsets.symmetric(horizontal: 14.0),
-          onPressed:
-              snapShot.data == Status.playing || snapShot.data == Status.draw
-                  ? null
-                  : () => this.statusSink.add(Status.playing),
+          onPressed: snapShot.data == Status.playing ||
+                  snapShot.data == Status.draw ||
+                  snapShot.data == Status.prise
+              ? null
+              : () => this.statusSink.add(Status.playing),
           child: _buildText(context),
         );
       },
