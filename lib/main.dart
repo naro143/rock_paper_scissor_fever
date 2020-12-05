@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -274,17 +275,22 @@ class Display extends StatelessWidget {
                     stream: this.eHandIndexStream,
                     builder:
                         (BuildContext context, AsyncSnapshot<int> eSnapShot) {
-                      return NeumorphicIcon(
-                        sSnapShot.data == Status.playing
-                            ? Icons.help_outline
-                            : handIcons[eSnapShot.data],
-                        size: 180,
-                        style: NeumorphicStyle(
-                          color: sSnapShot.data == Status.lose ||
-                                  sSnapShot.data == Status.draw
-                              ? NeumorphicTheme.accentColor(context)
-                              : NeumorphicTheme.baseColor(context),
-                        ),
+                      return LayoutBuilder(
+                        builder: (context, constraint) {
+                          double iconMargin = Platform.isAndroid ? 40.0 : 100.0;
+                          return NeumorphicIcon(
+                            sSnapShot.data == Status.playing
+                                ? Icons.help_outline
+                                : handIcons[eSnapShot.data],
+                            size: constraint.biggest.width - iconMargin,
+                            style: NeumorphicStyle(
+                              color: sSnapShot.data == Status.lose ||
+                                      sSnapShot.data == Status.draw
+                                  ? NeumorphicTheme.accentColor(context)
+                                  : NeumorphicTheme.baseColor(context),
+                            ),
+                          );
+                        },
                       );
                     },
                   ),
