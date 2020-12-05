@@ -25,11 +25,11 @@ final bonusCounts = [20, 1, 7, 4, 10, 2, 5, 1];
 final alignments = [
   Alignment.topCenter,
   Alignment(0.7, -0.7),
-  Alignment.centerLeft,
+  Alignment.centerRight,
   Alignment(0.7, 0.7),
   Alignment.bottomCenter,
   Alignment(-0.7, 0.7),
-  Alignment.centerRight,
+  Alignment.centerLeft,
   Alignment(-0.7, -0.7)
 ];
 
@@ -142,11 +142,29 @@ class _MainContentState extends State<MainContent> {
     }
   }
 
-  void prise() {
-    int bIndex = random.nextInt(bonusCounts.length);
-    _onBonusIndexChange.sink.add(bIndex);
+  void prise() async {
+    int value = await roulette();
     _onCoinCountsChange.sink
-        .add(_onCoinCountsChange.stream.value + bonusCounts[bIndex]);
+        .add(_onCoinCountsChange.stream.value + bonusCounts[value]);
+  }
+
+  Future<int> roulette() async {
+    int bIndex = random.nextInt(bonusCounts.length);
+    int moveCount = 10 + random.nextInt(8);
+    int interval = 300;
+    int ticks = bIndex + moveCount;
+
+    Timer.periodic(Duration(milliseconds: interval), (Timer timer) {
+      if (ticks == bIndex) {
+        timer.cancel();
+      } else {
+        ticks -= 1;
+        _onBonusIndexChange.sink.add(ticks % bonusCounts.length);
+      }
+    });
+
+    await Future.delayed(Duration(milliseconds: interval * moveCount));
+    return bIndex;
   }
 
   @override
@@ -398,9 +416,10 @@ class PlayButton extends StatelessWidget {
             intensity: 0.8,
           ),
           margin: EdgeInsets.symmetric(horizontal: 14.0),
-          onPressed: snapShot.data == Status.playing
-              ? null
-              : () => this.statusSink.add(Status.playing),
+          onPressed:
+              snapShot.data == Status.playing || snapShot.data == Status.draw
+                  ? null
+                  : () => this.statusSink.add(Status.playing),
           child: _buildText(context),
         );
       },
