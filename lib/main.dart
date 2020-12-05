@@ -1,8 +1,37 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_neumorphic/flutter_neumorphic.dart';
 import 'package:rock_paper_scissor_fever/rock_paper_scissor_icons.dart';
+import 'package:rxdart/rxdart.dart';
+
+enum Status {
+  init,
+  playing,
+  judge,
+  win,
+  draw,
+  lose,
+}
+final hands = ["rock", "scissor", "paper"];
+final handIcons = [
+  RockPaperScissor.rock,
+  RockPaperScissor.scissor,
+  RockPaperScissor.paper,
+];
+final bonusCounts = [20, 1, 7, 4, 10, 2, 5, 1];
+
+final alignments = [
+  Alignment.topCenter,
+  Alignment(0.7, -0.7),
+  Alignment.centerLeft,
+  Alignment(0.7, 0.7),
+  Alignment.bottomCenter,
+  Alignment(-0.7, 0.7),
+  Alignment.centerRight,
+  Alignment(-0.7, -0.7)
+];
 
 void main() {
   runApp(MyApp());
@@ -32,156 +61,172 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class MyHomePage extends StatefulWidget {
+class MyHomePage extends StatelessWidget {
   @override
-  _MyHomePageState createState() => _MyHomePageState();
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: MainContent(),
+    );
+  }
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  final hands = ["rock", "scissor", "paper"];
-  final handIcons = [
-    RockPaperScissor.rock,
-    RockPaperScissor.scissor,
-    RockPaperScissor.paper,
-  ];
-  final bonusCounts = [20, 1, 7, 4, 10, 2, 5, 1];
+class MainContent extends StatefulWidget {
+  @override
+  _MainContentState createState() => _MainContentState();
+}
+
+class _MainContentState extends State<MainContent> {
   final random = Random();
-  int _coinCounts;
-  int _bonusIndex;
-  int _pHandIndex;
-  int _eHandIndex;
-  bool _isPlaying;
-  int _result;
+
+  final _onCoinCountsChange = BehaviorSubject<int>.seeded(20);
+  final _onBonusIndexChange = BehaviorSubject<int>.seeded(9);
+  final _onPHandIndexChange = BehaviorSubject<int>.seeded(9);
+  final _onEHandIndexChange = BehaviorSubject<int>.seeded(0);
+  final _onStatusChange = BehaviorSubject<Status>.seeded(Status.init);
 
   @override
   void initState() {
+    _onStatusChange.stream.listen((event) async {
+      switch (event) {
+        case Status.playing:
+          play();
+          break;
+        case Status.judge:
+          judge();
+          break;
+        case Status.draw:
+          Future.delayed(const Duration(milliseconds: 1500), () {
+            _onCoinCountsChange.sink.add(_onCoinCountsChange.stream.value + 1);
+            _onStatusChange.sink.add(Status.playing);
+          });
+          break;
+        case Status.win:
+          prise();
+          break;
+        case Status.lose:
+          break;
+      }
+    });
     super.initState();
-    _coinCounts = 20;
-    _isPlaying = false;
-    _result = 0;
-    _pHandIndex = 9;
-    _eHandIndex = 0;
-    _bonusIndex = 9;
+  }
+
+  @override
+  void dispose() {
+    _onCoinCountsChange.close();
+    _onBonusIndexChange.close();
+    _onPHandIndexChange.close();
+    _onEHandIndexChange.close();
+    _onStatusChange.close();
+    super.dispose();
   }
 
   void play({bool isFree = false}) {
-    setState(() {
-      _pHandIndex = 9;
-      _bonusIndex = 9;
-      _result = 0;
-      _isPlaying = true;
-      _coinCounts -= isFree ? 0 : 1;
-      _eHandIndex = random.nextInt(hands.length);
-    });
+    _onPHandIndexChange.sink.add(9);
+    _onBonusIndexChange.sink.add(9);
+    _onEHandIndexChange.sink.add(random.nextInt(hands.length));
+    if (!isFree) {
+      _onCoinCountsChange.sink.add(_onCoinCountsChange.stream.value - 1);
+    }
   }
 
-  int judge() {
-    if (_pHandIndex == _eHandIndex) {
-      return 0;
-    }
-    if ((_pHandIndex == 2 && _eHandIndex == 0) || _pHandIndex < _eHandIndex) {
-      return 1;
-    }
-    return -1;
-  }
-
-  void result(int pHandIndex) {
-    setState(() {
-      _isPlaying = false;
-      _pHandIndex = pHandIndex;
-    });
-    int result = judge();
-    if (result == 0) {
-      Future.delayed(const Duration(milliseconds: 1500), () {
-        play(isFree: true);
-      });
-      return;
-    }
-    setState(() {
-      _result = result;
-    });
-    if (result == 1) {
-      prise();
-      return;
+  void judge() {
+    if (_onPHandIndexChange.stream.value == _onEHandIndexChange.stream.value) {
+      _onStatusChange.sink.add(Status.draw);
+    } else if ((_onPHandIndexChange.stream.value == 2 &&
+            _onEHandIndexChange.stream.value == 0) ||
+        _onEHandIndexChange.stream.value - _onPHandIndexChange.stream.value ==
+            1) {
+      _onStatusChange.sink.add(Status.win);
+    } else {
+      _onStatusChange.sink.add(Status.lose);
     }
   }
 
   void prise() {
     int bIndex = random.nextInt(bonusCounts.length);
-    setState(() {
-      _bonusIndex = bIndex;
-      _coinCounts += bonusCounts[bIndex];
-    });
+    _onBonusIndexChange.sink.add(bIndex);
+    _onCoinCountsChange.sink
+        .add(_onCoinCountsChange.stream.value + bonusCounts[bIndex]);
   }
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          Padding(
-            padding: EdgeInsets.fromLTRB(20.0, 0.0, 20.0, 20.0),
-            child: NeumorphicText(
-              "Rock Paper Scissor Fever",
-              style: NeumorphicStyle(
-                depth: 1, //customize depth here
-                color: NeumorphicTheme.defaultTextColor(
-                    context), //customize color here
-              ),
-              textStyle: NeumorphicTextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        Padding(
+          padding: EdgeInsets.fromLTRB(20.0, 0.0, 20.0, 20.0),
+          child: _buildTitle(context),
+        ),
+        Flexible(
+          child: Display(
+            bonusIndexStream: _onBonusIndexChange.stream,
+            eHandIndexStream: _onEHandIndexChange.stream,
+            statusStream: _onStatusChange.stream,
+            eHandIndexSink: _onEHandIndexChange.sink,
+            statusSink: _onStatusChange.sink,
           ),
-          Flexible(child: _buildDisplay(context)),
-          SizedBox(height: 30),
-          _buildHandButtons(context),
-          SizedBox(height: 30),
-          NeumorphicButton(
-            style: NeumorphicStyle(
-              intensity: 0.8,
-            ),
-            margin: EdgeInsets.symmetric(horizontal: 14.0),
-            onPressed: _isPlaying ? null : () => play(),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  "$_coinCounts",
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 36,
-                    shadows: [
-                      Shadow(
-                          color: Colors.black38,
-                          offset: Offset(1.0, 1.0),
-                          blurRadius: 2)
-                    ],
-                    color: NeumorphicTheme.defaultTextColor(context),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
+        SizedBox(height: 30),
+        _buildHandButtons(context),
+        SizedBox(height: 30),
+        PlayButton(
+          coinCountsStream: _onCoinCountsChange.stream,
+          statusStream: _onStatusChange.stream,
+          statusSink: _onStatusChange.sink,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTitle(BuildContext context) {
+    return NeumorphicText(
+      "Rock Paper Scissor Fever",
+      style: NeumorphicStyle(
+        depth: 1, //customize depth here
+        color: NeumorphicTheme.defaultTextColor(context), //customize color here
+      ),
+      textStyle: NeumorphicTextStyle(
+        fontSize: 28,
+        fontWeight: FontWeight.bold,
       ),
     );
   }
 
-  Widget _buildDisplay(BuildContext context) {
-    final alignments = [
-      Alignment.topCenter,
-      Alignment(0.7, -0.7),
-      Alignment.centerLeft,
-      Alignment(0.7, 0.7),
-      Alignment.bottomCenter,
-      Alignment(-0.7, 0.7),
-      Alignment.centerRight,
-      Alignment(-0.7, -0.7)
-    ];
+  Widget _buildHandButtons(BuildContext context) {
+    final List<Widget> children = List.generate(
+        3,
+        (index) => HandButton(
+              index: index,
+              pHandIndexStream: _onPHandIndexChange.stream,
+              statusStream: _onStatusChange.stream,
+              pHandIndexSink: _onPHandIndexChange.sink,
+              statusSink: _onStatusChange.sink,
+            ));
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: children,
+    );
+  }
+}
+
+class Display extends StatelessWidget {
+  final Stream<int> bonusIndexStream;
+  final Stream<int> eHandIndexStream;
+  final Stream<Status> statusStream;
+  final StreamSink<int> eHandIndexSink;
+  final StreamSink<Status> statusSink;
+
+  Display(
+      {this.bonusIndexStream,
+      this.eHandIndexStream,
+      this.statusStream,
+      this.eHandIndexSink,
+      this.statusSink});
+
+  @override
+  Widget build(BuildContext context) {
     final List<Widget> children = List<Widget>.generate(9, (index) {
       if (index == 8) {
         return Neumorphic(
@@ -196,16 +241,32 @@ class _MyHomePageState extends State<MyHomePage> {
               boxShape: NeumorphicBoxShape.circle(),
             ),
             margin: EdgeInsets.all(10),
-            child: Center(
-              child: NeumorphicIcon(
-                _isPlaying ? Icons.help_outline : handIcons[_eHandIndex],
-                size: 180,
-                style: NeumorphicStyle(
-                  color: _result < 1
-                      ? NeumorphicTheme.accentColor(context)
-                      : NeumorphicTheme.baseColor(context),
-                ),
-              ),
+            child: StreamBuilder(
+              initialData: Status.init,
+              stream: this.statusStream,
+              builder: (BuildContext context, AsyncSnapshot<Status> sSnapShot) {
+                return Center(
+                  child: StreamBuilder(
+                    initialData: 0,
+                    stream: this.eHandIndexStream,
+                    builder:
+                        (BuildContext context, AsyncSnapshot<int> eSnapShot) {
+                      return NeumorphicIcon(
+                        sSnapShot.data == Status.playing
+                            ? Icons.help_outline
+                            : handIcons[eSnapShot.data],
+                        size: 180,
+                        style: NeumorphicStyle(
+                          color: sSnapShot.data == Status.lose ||
+                                  sSnapShot.data == Status.draw
+                              ? NeumorphicTheme.accentColor(context)
+                              : NeumorphicTheme.baseColor(context),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
             ),
           ),
         );
@@ -236,47 +297,141 @@ class _MyHomePageState extends State<MyHomePage> {
       style: NeumorphicStyle(
         depth: 0,
       ),
-      child: Text(
-        "${bonusCounts[index]}",
-        style: TextStyle(
-          fontWeight: FontWeight.w700,
-          fontSize: 32,
-          shadows: [
-            Shadow(
-                color: Colors.black38, offset: Offset(1.0, 1.0), blurRadius: 2)
-          ],
-          color: index == _bonusIndex
-              ? NeumorphicTheme.accentColor(context)
-              : NeumorphicTheme.baseColor(context),
-        ),
+      child: StreamBuilder(
+        initialData: 9,
+        stream: this.bonusIndexStream,
+        builder: (BuildContext context, AsyncSnapshot<int> snapShot) {
+          return Text(
+            "${bonusCounts[index]}",
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 32,
+              shadows: [
+                Shadow(
+                    color: Colors.black38,
+                    offset: Offset(1.0, 1.0),
+                    blurRadius: 2)
+              ],
+              color: snapShot.data == index
+                  ? NeumorphicTheme.accentColor(context)
+                  : NeumorphicTheme.baseColor(context),
+            ),
+          );
+        },
       ),
     );
   }
+}
 
-  Widget _buildHandButtons(BuildContext context) {
-    final List<Widget> children = List.generate(
-        3,
-        (index) => NeumorphicButton(
-              onPressed: () => _isPlaying ? result(index) : null,
-              style: NeumorphicStyle(
-                intensity: 0.8,
-                shape: NeumorphicShape.convex,
-                boxShape: NeumorphicBoxShape.circle(),
-              ),
-              child: NeumorphicIcon(
+class HandButton extends StatelessWidget {
+  final int index;
+  final Stream<int> pHandIndexStream;
+  final Stream<Status> statusStream;
+  final StreamSink<int> pHandIndexSink;
+  final StreamSink<Status> statusSink;
+
+  HandButton(
+      {this.index,
+      this.pHandIndexStream,
+      this.statusStream,
+      this.pHandIndexSink,
+      this.statusSink});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder(
+      initialData: Status.init,
+      stream: this.statusStream,
+      builder: (BuildContext context, AsyncSnapshot<Status> sSnapShot) {
+        return NeumorphicButton(
+          onPressed: () {
+            if (sSnapShot.data == Status.playing) {
+              this.pHandIndexSink.add(index);
+              this.statusSink.add(Status.judge);
+            }
+          },
+          style: NeumorphicStyle(
+            intensity: 0.8,
+            shape: NeumorphicShape.convex,
+            boxShape: NeumorphicBoxShape.circle(),
+          ),
+          child: StreamBuilder(
+            initialData: 9,
+            stream: this.pHandIndexStream,
+            builder: (BuildContext context, AsyncSnapshot<int> pSnapShot) {
+              return NeumorphicIcon(
                 handIcons[index],
                 size: 60,
                 style: NeumorphicStyle(
                   intensity: 0.8,
-                  color: _isPlaying || (0 <= _result && _pHandIndex == index)
+                  color: sSnapShot.data == Status.playing ||
+                          ((sSnapShot.data == Status.win ||
+                                  sSnapShot.data == Status.draw) &&
+                              pSnapShot.data == index)
                       ? NeumorphicTheme.accentColor(context)
                       : NeumorphicTheme.baseColor(context),
                 ),
-              ),
-            ));
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+}
+
+class PlayButton extends StatelessWidget {
+  final Stream<int> coinCountsStream;
+  final Stream<Status> statusStream;
+  final StreamSink<Status> statusSink;
+
+  PlayButton({this.coinCountsStream, this.statusStream, this.statusSink});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder(
+      initialData: Status.init,
+      stream: this.statusStream,
+      builder: (BuildContext context, AsyncSnapshot<Status> snapShot) {
+        return NeumorphicButton(
+          style: NeumorphicStyle(
+            intensity: 0.8,
+          ),
+          margin: EdgeInsets.symmetric(horizontal: 14.0),
+          onPressed: snapShot.data == Status.playing
+              ? null
+              : () => this.statusSink.add(Status.playing),
+          child: _buildText(context),
+        );
+      },
+    );
+  }
+
+  Widget _buildText(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: children,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        StreamBuilder(
+          initialData: 20,
+          stream: this.coinCountsStream,
+          builder: (BuildContext context, AsyncSnapshot<int> snapShot) {
+            return Text(
+              "${snapShot.data}",
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 36,
+                shadows: [
+                  Shadow(
+                      color: Colors.black38,
+                      offset: Offset(1.0, 1.0),
+                      blurRadius: 2)
+                ],
+                color: NeumorphicTheme.defaultTextColor(context),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 }
