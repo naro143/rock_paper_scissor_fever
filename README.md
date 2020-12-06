@@ -1,4 +1,4 @@
-# rock_paper_scissor_fever
+# rock_paper_scissors_fever
 じゃんけんフィーバーをNeumorphismで実装してみた。
 I tried to implement rock-paper-scissors with Neumorphism.
 
