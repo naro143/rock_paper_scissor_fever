@@ -4,7 +4,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_neumorphic/flutter_neumorphic.dart';
-import 'package:rock_paper_scissor_fever/rock_paper_scissor_icons.dart';
+import 'package:rock_paper_scissors_fever/rock_paper_scissor_icons.dart';
 import 'package:rxdart/rxdart.dart';
 
 enum Status {

@@ -1,4 +1,4 @@
-name: rock_paper_scissor_fever
+name: rock_paper_scissors_fever
 description: Win rock-paper-scissors and get coins.
 publish_to: 'none'
 version: 1.0.0+1
