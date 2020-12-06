@@ -4,7 +4,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_neumorphic/flutter_neumorphic.dart';
-import 'package:rock_paper_scissors_fever/rock_paper_scissor_icons.dart';
+import 'package:rock_paper_scissors_fever/rock_paper_scissors_icons.dart';
 import 'package:rxdart/rxdart.dart';
 
 enum Status {
@@ -16,14 +16,12 @@ enum Status {
   draw,
   lose,
 }
-final hands = ["rock", "scissor", "paper"];
 final handIcons = [
-  RockPaperScissor.rock,
-  RockPaperScissor.scissor,
-  RockPaperScissor.paper,
+  RockPaperScissors.rock,
+  RockPaperScissors.scissors,
+  RockPaperScissors.paper,
 ];
 final bonusCounts = [20, 1, 7, 4, 10, 2, 5, 1];
-
 final alignments = [
   Alignment.topCenter,
   Alignment(0.7, -0.7),
@@ -127,7 +125,7 @@ class _MainContentState extends State<MainContent> {
   void play({bool isFree = false}) {
     _onPHandIndexChange.sink.add(9);
     _onBonusIndexChange.sink.add(9);
-    _onEHandIndexChange.sink.add(random.nextInt(hands.length));
+    _onEHandIndexChange.sink.add(random.nextInt(handIcons.length));
     if (!isFree) {
       _onCoinCountsChange.sink.add(_onCoinCountsChange.stream.value - 1);
     }
@@ -276,20 +274,10 @@ class Display extends StatelessWidget {
                     builder:
                         (BuildContext context, AsyncSnapshot<int> eSnapShot) {
                       return LayoutBuilder(
-                        builder: (context, constraint) {
-                          double iconMargin = Platform.isAndroid ? 40.0 : 100.0;
-                          return NeumorphicIcon(
-                            sSnapShot.data == Status.playing
-                                ? Icons.help_outline
-                                : handIcons[eSnapShot.data],
-                            size: constraint.biggest.width - iconMargin,
-                            style: NeumorphicStyle(
-                              color: sSnapShot.data == Status.lose ||
-                                      sSnapShot.data == Status.draw
-                                  ? NeumorphicTheme.accentColor(context)
-                                  : NeumorphicTheme.baseColor(context),
-                            ),
-                          );
+                        builder:
+                            (BuildContext context, BoxConstraints constraint) {
+                          return _buildHands(context, constraint,
+                              sSnapShot.data, eSnapShot.data);
                         },
                       );
                     },
@@ -348,6 +336,34 @@ class Display extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildHands(BuildContext context, BoxConstraints constraint,
+      Status status, int eHandIndex) {
+    final double iconMargin = Platform.isAndroid ? 40.0 : 100.0;
+    final List<Widget> children = List.generate(4, (index) {
+      return Opacity(
+        opacity:
+            (index < 3 && status != Status.playing && eHandIndex == index) ||
+                    (index == 3 && status == Status.playing)
+                ? 1.0
+                : 0.0,
+        child: NeumorphicIcon(
+          index == 3 ? Icons.help_outline : handIcons[index],
+          size: constraint.biggest.width - iconMargin,
+          style: NeumorphicStyle(
+            color:
+                (index != 3) && (status == Status.lose || status == Status.draw)
+                    ? NeumorphicTheme.accentColor(context)
+                    : NeumorphicTheme.baseColor(context),
+          ),
+        ),
+      );
+    });
+
+    return Stack(
+      children: children,
     );
   }
 }
