@@ -1,4 +1,4 @@
-package com.example.rock_paper_scissor_fever
+package com.naro143.RPSFever
 
 import io.flutter.embedding.android.FlutterActivity
 
